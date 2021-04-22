@@ -1,84 +1,204 @@
 <?php
-/**
-* 2007-2021 PrestaShop
-*
-* NOTICE OF LICENSE
-*
-* This source file is subject to the Academic Free License (AFL 3.0)
-* that is bundled with this package in the file LICENSE.txt.
-* It is also available through the world-wide-web at this URL:
-* http://opensource.org/licenses/afl-3.0.php
-* If you did not receive a copy of the license and are unable to
-* obtain it through the world-wide-web, please send an email
-* to license@prestashop.com so we can send you a copy immediately.
-*
-* DISCLAIMER
-*
-* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
-* versions in the future. If you wish to customize PrestaShop for your
-* needs please refer to http://www.prestashop.com for more information.
-*
-*  @author    PrestaShop SA <contact@prestashop.com>
-*  @copyright 2007-2021 PrestaShop SA
-*  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
-*  International Registered Trademark & Property of PrestaShop SA
-*/
-class PagounoValidationModuleFrontController extends ModuleFrontController
-{
-    /**
-     * This class should be use by your Instant Payment
-     * Notification system to validate the order remotely
-     */
-    public function postProcess()
-    {
-        /*
-         * If the module is not active anymore, no need to process anything.
-         */
-        if ($this->module->active == false) {
-            die;
+
+class PagounoValidationModuleFrontController extends ModuleFrontController {
+
+    public function doPost($postUrl, $params, $key){
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_URL => $postUrl,
+            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POST => 1,
+            CURLOPT_POSTFIELDS => $params,
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'Authorization: ' . $key
+            )
+        ));
+        $response = curl_exec($curl);
+        $http_status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+        return [$http_status, $response];
+    }
+
+    public function getPagoUnoStatus() {
+        $status = OrderState::getOrderStates((int)$this->context->language->id);
+        $pagounostatus = array();
+        for ($i = 0; $i < count($status); $i ++) {
+            switch ($status[$i]['name']) {
+                case 'pagoUno - transacción aprobada':
+                    $pagounostatus['status_aprobada'] = $status[$i]['id_order_state'];
+                    break;
+                case 'pagoUno - transacción rechazada':
+                    $pagounostatus['status_rechazada'] = $status[$i]['id_order_state'];
+                    break;
+                default: break;
+            }
         }
+        return $pagounostatus;
+    }
 
-        /**
-         * Since it is an example, we choose sample data,
-         * You'll have to get the correct values :)
-         */
-        $cart_id = 1;
-        $customer_id = 1;
-        $amount = 100.00;
-
-        /*
-         * Restore the context from the $cart_id & the $customer_id to process the validation properly.
-         */
-        Context::getContext()->cart = new Cart((int) $cart_id);
-        Context::getContext()->customer = new Customer((int) $customer_id);
-        Context::getContext()->currency = new Currency((int) Context::getContext()->cart->id_currency);
-        Context::getContext()->language = new Language((int) Context::getContext()->customer->id_lang);
-
-        $secure_key = Context::getContext()->customer->secure_key;
-
-        if ($this->isValidOrder() === true) {
-            $payment_status = Configuration::get('PS_OS_PAYMENT');
-            $message = null;
+    public function postProcess() {
+        $cuotas_options = Pagouno::pagounoCuotas();
+        // token
+        $token = $_POST["pagouno_token"];
+        // cuotas, total y metodo de pago
+        if ( $_POST["pagouno_cuotas"] == 'no') {
+            $total = $this->context->cart->getOrderTotal(true, Cart::BOTH);
+            $cuotas = 1;
+            $metodo_de_pago = 'pagoUno';
         } else {
-            $payment_status = Configuration::get('PS_OS_ERROR');
-
-            /**
-             * Add a message to explain why the order has not been validated
-             */
-            $message = $this->module->l('An error occurred while processing payment');
+            $cuotas = $cuotas_options[ $_POST["pagouno_cuotas"] ]['option']['cuotas'];
+            $total = $cuotas_options[ $_POST["pagouno_cuotas"] ]['option']['total'];
+            $metodo_de_pago = 'pagoUno - '.$cuotas_options[ $_POST["pagouno_cuotas"] ]['option']['inner'];
         }
 
-        $module_name = $this->module->displayName;
-        $currency_id = (int) Context::getContext()->currency->id;
+        if ($total == null){
 
-        return $this->module->validateOrder($cart_id, $payment_status, $amount, $module_name, $message, array(), $currency_id, false, $secure_key);
+        } else {
+            // carrito
+            $cart = $this->context->cart;
+            $authorized = false;
+
+            // status de pagoUno
+            $pustatus = $this->getPagoUnoStatus();
+
+            // verifica si esta activo el modulo, si es un cliente valido, y si la direcciones son validas
+            if (!$this->module->active
+                || $cart->id_customer == 0
+                || $cart->id_address_delivery == 0
+                || $cart->id_address_invoice == 0) {
+                Tools::redirect('index.php?controller=order&step=1');
+            }
+
+            // verifica el modulo si esta autorizado
+            foreach (Module::getPaymentModules() as $module) {
+                if ($module['name'] == 'pagoUno') {
+                    $authorized = true;
+                    break;
+                }
+            }
+
+            if ( !$authorized ) {
+                die( $this->l('Metodo de pago no disponible.') );
+            } else {
+                // nuevo customer
+                $customer = new Customer($cart->id_customer);
+
+                // verifica si es valida la cuenta del cliente
+                if (!Validate::isLoadedObject($customer)) {
+                    Tools::redirect('index.php?controller=order&step=1');
+                } else {
+                    // formateo de los valores para el servicio de cobro
+                    $formated_price = intval(str_replace( array(".", '"', "$"), "",  number_format((float)$total, 2, '.', '')));
+                    $formated_dues = intval($cuotas);
+                    $url = str_replace( array("http://", "https://", "www.", ".com", ".org", ".net", ".ar", ".cl", ".ur", ".br", ".", "/", "-", "\/"), "",  Tools::getHttpHost(true).__PS_BASE_URI__ );
+                    if ( strlen( strval(strval($cart->id)) ) == 25) {
+                        $seller_descriptor = strval($cart->id);
+                    } else {
+                        if ( strlen( strval($url . "*" . strval($cart->id)) ) <= 25) {
+                            $seller_descriptor = strval( $url . "*" . strval($cart->id));
+                        }  else {
+                            $difference = -1 * abs( ( strlen( strval($url) ) + strlen( strval("*" . strval($cart->id)) ) ) - 25 );
+                            $chop_url = substr( $url, 0, $difference );
+                            $seller_descriptor = strval( $chop_url . "*" . strval($cart->id));
+                        }
+                    }
+
+                    // obejto que va en el servicio de cobro
+                    $purch_list = new StdClass();
+                    $purch_list -> merchant_code_group = Tools::getValue('PAGOUNO_CODIGO_AGRUPADOR', Configuration::get('PAGOUNO_CODIGO_AGRUPADOR'));
+                    $purch_list -> transaction_amount = $formated_price;
+                    $purch_list -> installments_plan = 0;
+                    $purch_list -> installments = $formated_dues;
+                    $purch_list -> transaction_currency_code = "032";
+                    $purch_list -> seller_descriptor = $seller_descriptor;
+
+                    $prim_acc = new StdClass();
+                    $prim_acc -> token_id = $token;
+                    $prim_acc -> purchase_list = [$purch_list];
+
+                    $data = new StdClass();
+                    $data -> transaction_group_type = 1;
+                    $data -> customer_transaction_identificator = strval($cart->id);
+                    $data -> external_reference = strval($cart->id);
+                    $data -> primary_account_number_list = [$prim_acc];
+
+                    $payload = json_encode($data);
+
+                    //envio la info
+                    $response = $this->doPost(
+                        'https://api.pagouno.com/v1/Transaction/purchasegroup',
+                        $payload,
+                        Tools::getValue('PAGOUNO_PRIVATE_KEY', Configuration::get('PAGOUNO_PRIVATE_KEY'))
+                    );
+
+                    if ($response[0] == 200) {
+                        $body = json_decode( $response[1], true );
+                        switch ($body['status']) {
+                            case 200:
+                                if ($body['data']['success']) {
+                                    try {
+                                        $this->module->validateOrder(
+                                            (int) $this->context->cart->id,
+                                            $pustatus['status_aprobada'],
+                                            $this->context->cart->getOrderTotal(true, Cart::BOTH),
+                                            $metodo_de_pago,
+                                            null,
+                                            null,
+                                            (int) $this->context->currency->id,
+                                            false,
+                                            $customer->secure_key
+                                        );
+
+                                        $db = Db::getInstance();
+
+                                        $order_reference = $db->executeS('SELECT reference FROM '._DB_PREFIX_.'orders WHERE id_order = '.(int)$this->module->currentOrder);
+
+                                        $db->update( 'orders', array(
+                                            'total_paid_tax_incl' => pSQL((float)$total), // total pagado que tiene aparece como precio total
+                                            'date_upd' => date('Y-m-d H:i:s')
+                                        ), 'id_order = '.(int)$this->module->currentOrder, 1, true);
+
+                                        $db->update( 'order_payment', array(
+                                            'amount' => pSQL((float)$total),
+                                            'card_number' => $body['data']['request'][0]['last_4_digits'],
+                                            'card_brand' => $body['data']['request'][0]['card']
+                                        ), 'order_reference = "'.$order_reference[0]['reference'].'"', 1, true);
+
+                                        // pagina de confirmacion
+//                                        Tools::redirect(
+//                                            __PS_BASE_URI__
+//                                            .'index.php?controller=order-confirmation'
+//                                            .'&id_cart='.(int)$cart->id
+//                                            .'&id_module='.(int)$this->module->id
+//                                            .'&id_order='.$this->module->currentOrder
+//                                            .'&key='.$customer->secure_key
+//                                        );
+                                        
+                                        $this->setTemplate('module:pagoUno/views/templates/hook/payment_return.tpl');
+                                        
+                                    }catch (Exception $e) {
+                                    }
+                                } else {
+                                    Tools::redirect(__PS_BASE_URI__ .'index.php?controller=order&step=1&puerror=1');
+                                }
+                                break;
+                            case 400:
+                                Tools::redirect(__PS_BASE_URI__ .'index.php?controller=order&step=1&puerror=400');
+                                break;
+                            case 403:
+                                Tools::redirect(__PS_BASE_URI__ .'index.php?controller=order&step=1&puerror=403');
+                                break;
+                        }
+                    } else {
+                        Tools::redirect(__PS_BASE_URI__ .'index.php?controller=order&step=1&puerror=2');
+                    }
+                }
+            }
+        }
     }
 
-    protected function isValidOrder()
-    {
-        /*
-         * Add your checks right there
-         */
-        return true;
-    }
 }

@@ -6,8 +6,8 @@
     <description><![CDATA[Cobre con tarjeta de credito y d&eacute;bito con pagoUno.]]></description>
     <author><![CDATA[entradaUno]]></author>
     <tab><![CDATA[payments_gateways]]></tab>
-    <confirmUninstall><![CDATA[¿Esta seguro que quiere desinstalar el módulo pagoUno?]]></confirmUninstall>
+	<confirmUninstall><![CDATA[¿Esta seguro que quiere desinstalar el módulo pagoUno?]]></confirmUninstall>
     <is_configurable>1</is_configurable>
     <need_instance>1</need_instance>
-    <limited_countries></limited_countries>
+	<limited_countries></limited_countries>
 </module>
