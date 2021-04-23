@@ -60,8 +60,7 @@ class Pagouno extends PaymentModule
      */
     public function install()
     {
-        if (extension_loaded('curl') == false)
-        {
+        if (extension_loaded('curl') == false) {
             $this->_errors[] = $this->l('You have to enable the cURL extension on your server to install this module');
             return false;
         }
@@ -85,7 +84,8 @@ class Pagouno extends PaymentModule
     }
 
 
-    public function addOrderState() {
+    public function addOrderState()
+    {
         // nombre y color de los estados
         $status = [
             [
@@ -132,8 +132,9 @@ class Pagouno extends PaymentModule
                 $order_state->deleted = false;
 
                 $languages = Language::getLanguages(false);
-                foreach ($languages as $language)
+                foreach ($languages as $language) {
                     $order_state->name[ $language['id_lang'] ] = $status[$i]['name'];
+                }
 
                 // actualizar
                 if ($order_state->add()) {
@@ -145,7 +146,8 @@ class Pagouno extends PaymentModule
         return true;
     }
 
-    public function getPagoUnoStatus() {
+    public function getPagoUnoStatus()
+    {
         $status = OrderState::getOrderStates((int)$this->context->language->id);
         $pagounostatus = array();
         for ($i = 0; $i < count($status); $i ++) {
@@ -162,34 +164,33 @@ class Pagouno extends PaymentModule
         return $pagounostatus;
     }
 
+    private static function isNumeric($num)
+    {
+        if (is_numeric($num)) {
+            if ($num == 0) {
+                return 'no';
+            } else {
+                return $num;
+            }
+        } else {
+            if (empty($num)) {
+                return '1';
+            } else {
+                return 'no';
+            }
+        }
+    }
+
+
     /**
      * Load the configuration form
      */
     public function getContent()
     {
-        function isNumeric ($num) {
-            if (is_numeric($num)) {
-                if ($num == 0) {
-                    return 'no';
-                } else {
-                    return $num;
-                }
-            } else {
-                if (empty($num)) {
-                    return '1';
-                } else {
-                    return 'no';
-                }
-            }
-        }
-
         $output = null;
 
         if (Tools::isSubmit('submit'.$this->name)) {
-
-                $output .= $this->displayConfirmation($this->l('Configuración guardada'));
-
-            }
+            $output .= $this->displayConfirmation($this->l('Configuración guardada'));
         }
 
         return $output.$this->renderForm();
@@ -672,23 +673,23 @@ class Pagouno extends PaymentModule
     {
         $output = '';
 
-        $val_adicional = strval(Tools::getValue('PAGOUNO_VALIDACION_ADICIONAL'));
-        $public_key    = strval(Tools::getValue('PAGOUNO_PUBLIC_KEY'));
-        $private_key   = strval(Tools::getValue('PAGOUNO_PRIVATE_KEY'));
-        $merch_code    = strval(Tools::getValue('PAGOUNO_CODIGO_AGRUPADOR'));
+        $val_adicional = (string)(Tools::getValue('PAGOUNO_VALIDACION_ADICIONAL'));
+        $public_key    = (string)(Tools::getValue('PAGOUNO_PUBLIC_KEY'));
+        $private_key   = (string)(Tools::getValue('PAGOUNO_PRIVATE_KEY'));
+        $merch_code    = (string)(Tools::getValue('PAGOUNO_CODIGO_AGRUPADOR'));
         // cuotas
-        $ac3           = strval(Tools::getValue('PAGOUNO_AC3'));
-        $ac6           = strval(Tools::getValue('PAGOUNO_AC6'));
-        $ac9           = strval(Tools::getValue('PAGOUNO_AC9'));
-        $ac12          = strval(Tools::getValue('PAGOUNO_AC12'));
-        $ac24          = strval(Tools::getValue('PAGOUNO_AC24'));
-        $aa3           = strval(Tools::getValue('PAGOUNO_AA3'));
-        $aa6           = strval(Tools::getValue('PAGOUNO_AA6'));
-        $aa12          = strval(Tools::getValue('PAGOUNO_AA12'));
-        $aa18          = strval(Tools::getValue('PAGOUNO_AA18'));
-        $as3           = strval(Tools::getValue('PAGOUNO_AS3'));
-        $as6           = strval(Tools::getValue('PAGOUNO_AS6'));
-        $as12          = strval(Tools::getValue('PAGOUNO_AS12'));
+        $ac3           = (string)(Tools::getValue('PAGOUNO_AC3'));
+        $ac6           = (string)(Tools::getValue('PAGOUNO_AC6'));
+        $ac9           = (string)(Tools::getValue('PAGOUNO_AC9'));
+        $ac12          = (string)(Tools::getValue('PAGOUNO_AC12'));
+        $ac24          = (string)(Tools::getValue('PAGOUNO_AC24'));
+        $aa3           = (string)(Tools::getValue('PAGOUNO_AA3'));
+        $aa6           = (string)(Tools::getValue('PAGOUNO_AA6'));
+        $aa12          = (string)(Tools::getValue('PAGOUNO_AA12'));
+        $aa18          = (string)(Tools::getValue('PAGOUNO_AA18'));
+        $as3           = (string)(Tools::getValue('PAGOUNO_AS3'));
+        $as6           = (string)(Tools::getValue('PAGOUNO_AS6'));
+        $as12          = (string)(Tools::getValue('PAGOUNO_AS12'));
         // coeficientes
         $coef3         = Tools::getValue('PAGOUNO_C3');
         $coef6         = Tools::getValue('PAGOUNO_C6');
@@ -709,22 +710,20 @@ class Pagouno extends PaymentModule
         ||  !Validate::isGenericName($public_key)
         ||  !Validate::isGenericName($private_key)
         ||  !Validate::isGenericName($merch_code)
-        ||  isNumeric($coef3) == 'no'
-        ||  isNumeric($coef6) == 'no'
-        ||  isNumeric($coef9) == 'no'
-        ||  isNumeric($coef12) == 'no'
-        ||  isNumeric($coef24) == 'no'
-        ||  isNumeric($coefA6) == 'no'
-        ||  isNumeric($coefA12) == 'no'
-        ||  isNumeric($coefA18) == 'no') {
-
+        ||  self::isNumeric($coef3) == 'no'
+        ||  self::isNumeric($coef6) == 'no'
+        ||  self::isNumeric($coef9) == 'no'
+        ||  self::isNumeric($coef12) == 'no'
+        ||  self::isNumeric($coef24) == 'no'
+        ||  self::isNumeric($coefA6) == 'no'
+        ||  self::isNumeric($coefA12) == 'no'
+        ||  self::isNumeric($coefA18) == 'no') {
             $output .= $this->displayError($this->l('Configuración inválida'));
-
         } else {
             Configuration::updateValue('PAGOUNO_VALIDACION_ADICIONAL', $val_adicional);
             Configuration::updateValue('PAGOUNO_PUBLIC_KEY', $public_key);
             Configuration::updateValue('PAGOUNO_PRIVATE_KEY', $private_key);
-            Configuration::updateValue('PAGOUNO_CODIGO_AGRUPADOR',$merch_code);
+            Configuration::updateValue('PAGOUNO_CODIGO_AGRUPADOR', $merch_code);
             //Configuration::updateValue('PAGOUNO_CUOTAS', $pu_cuotas_arr);
             // cuotas
             Configuration::updateValue('PAGOUNO_AC3', $ac3);
@@ -753,134 +752,145 @@ class Pagouno extends PaymentModule
 
         return $output;
     }
-    public function pagounoCuotas() {
+
+    private static function option($cuotas, $total, $coef, $case)
+    {
+        $result = [];
+
+        switch ($case) {
+            case 'cint':
+                $result = [
+                    'inner' =>
+                        $cuotas
+                        . ' cuotas de $'
+                        . number_format((float)(($total * $coef) / $cuotas), 2, '.', '')
+                        . ' (Total: $' . number_format((float)($total * $coef), 2, '.', '')
+                        . ')',
+                    'cuotas' => $cuotas,
+                    'total' => number_format((float)($total * $coef), 2, '.', '')
+                ];
+                break;
+            case 'sint':
+                $result = [
+                    'inner' =>
+                        $cuotas
+                        . ' cuotas sin interés de $'
+                        . number_format((float)(($total * $coef) / $cuotas), 2, '.', '')
+                        . ' (Total: $' . number_format((float)($total * $coef), 2, '.', '')
+                        . ')',
+                    'cuotas' => $cuotas,
+                    'total' => number_format((float)($total * $coef), 2, '.', '')
+                ];
+                break;
+            case 'ahora':
+                $acuota = '';
+                switch ($cuotas) {
+                    case 13: $acuota = 3; break;
+                    case 16: $acuota = 6; break;
+                    case 7: $acuota = 12; break;
+                    case 8: $acuota = 18; break;
+                };
+                $result = [
+                    'inner' =>
+                        $acuota
+                        . ' cuotas con Ahora ' . $acuota . ' de $'
+                        . number_format((float)(($total * $coef) / $acuota), 2, '.', '')
+                        . ' (Total: $' . number_format((float)($total * $coef), 2, '.', '')
+                        . ')',
+                    'cuotas' => $cuotas,
+                    'total' => number_format((float)($total * $coef), 2, '.', '')
+                ];
+                break;
+        }
+
+        return $result;
+    }
+
+    private static function active_options($val)
+    {
+        $options = [];
+        for ($i = 0; $i < count($val); $i++) {
+            if ($val[$i]['isActive'] == 1) {
+                array_push($options, $val[$i]);
+            }
+        }
+        return $options;
+    }
+
+    public function pagounoCuotas()
+    {
         $total = Context::getContext()->cart->getOrderTotal(true);
 
-        function option($cuotas, $total, $coef, $case) {
-            switch ($case) {
-                case 'cint':
-                    return [
-                        'inner' =>
-                            $cuotas
-                            . ' cuotas de $'
-                            . number_format((float)(( $total * $coef ) / $cuotas), 2, '.', '')
-                            . ' (Total: $' . number_format((float)($total * $coef), 2, '.', '')
-                            . ')',
-                        'cuotas' => $cuotas,
-                        'total' => number_format((float)($total * $coef), 2, '.', '')
-                    ];
-                    break;
-                case 'sint':
-                    return [
-                        'inner' =>
-                            $cuotas
-                            . ' cuotas sin interés de $'
-                            . number_format((float)(( $total * $coef ) / $cuotas), 2, '.', '')
-                            . ' (Total: $' . number_format((float)($total * $coef), 2, '.', '')
-                            . ')',
-                        'cuotas' => $cuotas,
-                        'total' => number_format((float)($total * $coef), 2, '.', '')
-                    ];
-                    break;
-                case 'ahora':
-                    $acuota = '';
-                    switch ($cuotas) {
-                        case 13: $acuota = 3; break;
-                        case 16: $acuota = 6; break;
-                        case 7: $acuota = 12; break;
-                        case 8: $acuota = 18; break;
-                    };
-                    return [
-                        'inner' =>
-                            $acuota
-                            . ' cuotas con Ahora ' . $acuota . ' de $'
-                            . number_format((float)(( $total * $coef ) / $acuota), 2, '.', '')
-                            . ' (Total: $' . number_format((float)($total * $coef), 2, '.', '')
-                            . ')',
-                        'cuotas' => $cuotas,
-                        'total' => number_format((float)($total * $coef), 2, '.', '')
-                    ];
-                    break;
-            }
-        }
 
-        function active_options($val) {
-            $options = [];
-            for ($i = 0; $i < count($val); $i++) {
-                if ($val[$i]['isActive'] == 1) {
-                    array_push($options, $val[$i]);
-                }
-            }
-            return $options;
-        }
 
         $options = [
             [
                 'cuota'    => '3 cuotas de $'.number_format((float)$total, 2, '.', '').' (Total: $'.$total.')',
                 'isActive' => Tools::getValue('PAGOUNO_AC3', Configuration::get('PAGOUNO_AC3')),
-                'option'   => option(3, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C3', Configuration::get('PAGOUNO_C3')), 'cint')
+                'option'   => self::option(3, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C3', Configuration::get('PAGOUNO_C3')), 'cint')
             ],
             [
                 'cuota'    => '6 cuotas',
                 'isActive' => Tools::getValue('PAGOUNO_AC6', Configuration::get('PAGOUNO_AC6')),
-                'option'   => option(6, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C6', Configuration::get('PAGOUNO_C6')), 'cint')
+                'option'   => self::option(6, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C6', Configuration::get('PAGOUNO_C6')), 'cint')
             ],
             [
                 'cuota'    => '9 cuotas',
                 'isActive' => Tools::getValue('PAGOUNO_AC9', Configuration::get('PAGOUNO_AC9')),
-                'option'   => option(9, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C9', Configuration::get('PAGOUNO_C9')), 'cint')
+                'option'   => self::option(9, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C9', Configuration::get('PAGOUNO_C9')), 'cint')
             ],
             [
                 'cuota'    => '12 cuotas',
                 'isActive' => Tools::getValue('PAGOUNO_AC12', Configuration::get('PAGOUNO_AC12')),
-                'option'   => option(12, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C12', Configuration::get('PAGOUNO_C12')), 'cint')
+                'option'   => self::option(12, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C12', Configuration::get('PAGOUNO_C12')), 'cint')
             ],
             [
                 'cuota'    => '24 cuotas',
                 'isActive' => Tools::getValue('PAGOUNO_AC24', Configuration::get('PAGOUNO_AC24')),
-                'option'   => option(24, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C24', Configuration::get('PAGOUNO_C24')), 'cint')
+                'option'   => self::option(24, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_C24', Configuration::get('PAGOUNO_C24')), 'cint')
             ],
             [
                 'cuota'    => 'ahora 3',
                 'isActive' => Tools::getValue('PAGOUNO_AA3', Configuration::get('PAGOUNO_AA3')),
-                'option'   => option(13, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_CA3', Configuration::get('PAGOUNO_CA3')), 'ahora')
+                'option'   => self::option(13, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_CA3', Configuration::get('PAGOUNO_CA3')), 'ahora')
             ],
             [
                 'cuota'    => 'ahora 6',
                 'isActive' => Tools::getValue('PAGOUNO_AA6', Configuration::get('PAGOUNO_AA6')),
-                'option'   => option(16, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_CA6', Configuration::get('PAGOUNO_CA6')), 'ahora')
+                'option'   => self::option(16, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_CA6', Configuration::get('PAGOUNO_CA6')), 'ahora')
             ],
             [
                 'cuota'    => 'ahora 12',
                 'isActive' => Tools::getValue('PAGOUNO_AA12', Configuration::get('PAGOUNO_AA12')),
-                'option'   => option(7, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_CA12', Configuration::get('PAGOUNO_CA12')), 'ahora')
+                'option'   => self::option(7, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_CA12', Configuration::get('PAGOUNO_CA12')), 'ahora')
             ],
             [
                 'cuota'    => 'ahora 18',
                 'isActive' => Tools::getValue('PAGOUNO_AA18', Configuration::get('PAGOUNO_AA18')),
-                'option'   => option(8, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_CA18', Configuration::get('PAGOUNO_CA18')), 'ahora')
+                'option'   => self::option(8, number_format((float)$total, 2, '.', ''), Tools::getValue('PAGOUNO_CA18', Configuration::get('PAGOUNO_CA18')), 'ahora')
             ],
             [
                 'cuota'    => '3 cuotas sin interes',
                 'isActive' => Tools::getValue('PAGOUNO_AS3', Configuration::get('PAGOUNO_AS3')),
-                'option'   => option(3, number_format((float)$total, 2, '.', ''), 1, 'sint')
+                'option'   => self::option(3, number_format((float)$total, 2, '.', ''), 1, 'sint')
             ],
             [
                 'cuota'    => '6 cuotas sin interes',
                 'isActive' => Tools::getValue('PAGOUNO_AS3', Configuration::get('PAGOUNO_AS6')),
-                'option'   => option(6, number_format((float)$total, 2, '.', ''), 1, 'sint')
+                'option'   => self::option(6, number_format((float)$total, 2, '.', ''), 1, 'sint')
             ],
             [
                 'cuota'    => '12 cuotas sin interes',
                 'isActive' => Tools::getValue('PAGOUNO_AS3', Configuration::get('PAGOUNO_AS12')),
-                'option'   => option(12, number_format((float)$total, 2, '.', ''), 1, 'sint')
+                'option'   => self::option(12, number_format((float)$total, 2, '.', ''), 1, 'sint')
             ]
         ];
 
-        return active_options($options);
+        return self::active_options($options);
     }
 
-    public function hookHeader() {
+    public function hookHeader()
+    {
         $this->context->controller->addJS($this->_path . 'views/js/cleave.js');
         $this->context->controller->addJS($this->_path . 'views/js/mask.js');
         $this->context->controller->addJS($this->_path . 'views/js/pagouno.js');
@@ -894,7 +904,8 @@ class Pagouno extends PaymentModule
         ));
     }
 
-    public function hookPaymentOptions($params) {
+    public function hookPaymentOptions($params)
+    {
         /*
          * Verify if this module is active
          */
@@ -929,8 +940,8 @@ class Pagouno extends PaymentModule
         return $payment_options;
     }
 
-    public function hookPaymentReturn($params) {
-
+    public function hookPaymentReturn($params)
+    {
         if (!$this->active) {
             return;
         }
@@ -938,9 +949,11 @@ class Pagouno extends PaymentModule
         return $this->fetch('module:pagoUno/views/templates/hook/payment_return.tpl');
     }
 
-    public function hookOrderConfirmation($params) {
+    public function hookOrderConfirmation($params)
+    {
     }
 
-    public function hookActionValidateOrder($params) {
+    public function hookActionValidateOrder($params)
+    {
     }
 }

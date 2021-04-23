@@ -1,8 +1,9 @@
 <?php
 
-class PagounoValidationModuleFrontController extends ModuleFrontController {
-
-    public function doPost($postUrl, $params, $key){
+class PagounoValidationModuleFrontController extends ModuleFrontController
+{
+    public function doPost($postUrl, $params, $key)
+    {
         $curl = curl_init();
         curl_setopt_array($curl, array(
             CURLOPT_RETURNTRANSFER => 1,
@@ -23,7 +24,8 @@ class PagounoValidationModuleFrontController extends ModuleFrontController {
         return [$http_status, $response];
     }
 
-    public function getPagoUnoStatus() {
+    public function getPagoUnoStatus()
+    {
         $status = OrderState::getOrderStates((int)$this->context->language->id);
         $pagounostatus = array();
         for ($i = 0; $i < count($status); $i ++) {
@@ -40,23 +42,23 @@ class PagounoValidationModuleFrontController extends ModuleFrontController {
         return $pagounostatus;
     }
 
-    public function postProcess() {
+    public function postProcess()
+    {
         $cuotas_options = Pagouno::pagounoCuotas();
         // token
-        $token = $_POST["pagouno_token"];
+        $token = Tools::getValue("pagouno_token");
         // cuotas, total y metodo de pago
-        if ( $_POST["pagouno_cuotas"] == 'no') {
+        if (Tools::getValue("pagouno_cuotas") == 'no') {
             $total = $this->context->cart->getOrderTotal(true, Cart::BOTH);
             $cuotas = 1;
             $metodo_de_pago = 'pagoUno';
         } else {
-            $cuotas = $cuotas_options[ $_POST["pagouno_cuotas"] ]['option']['cuotas'];
-            $total = $cuotas_options[ $_POST["pagouno_cuotas"] ]['option']['total'];
-            $metodo_de_pago = 'pagoUno - '.$cuotas_options[ $_POST["pagouno_cuotas"] ]['option']['inner'];
+            $cuotas = $cuotas_options[Tools::getValue("pagouno_cuotas")]['option']['cuotas'];
+            $total = $cuotas_options[Tools::getValue("pagouno_cuotas")]['option']['total'];
+            $metodo_de_pago = 'pagoUno - '.$cuotas_options[Tools::getValue("pagouno_cuotas")]['option']['inner'];
         }
 
-        if ($total == null){
-
+        if ($total == null) {
         } else {
             // carrito
             $cart = $this->context->cart;
@@ -81,8 +83,8 @@ class PagounoValidationModuleFrontController extends ModuleFrontController {
                 }
             }
 
-            if ( !$authorized ) {
-                die( $this->l('Metodo de pago no disponible.') );
+            if (!$authorized) {
+                die($this->l('Metodo de pago no disponible.'));
             } else {
                 // nuevo customer
                 $customer = new Customer($cart->id_customer);
@@ -92,18 +94,18 @@ class PagounoValidationModuleFrontController extends ModuleFrontController {
                     Tools::redirect('index.php?controller=order&step=1');
                 } else {
                     // formateo de los valores para el servicio de cobro
-                    $formated_price = intval(str_replace( array(".", '"', "$"), "",  number_format((float)$total, 2, '.', '')));
-                    $formated_dues = intval($cuotas);
-                    $url = str_replace( array("http://", "https://", "www.", ".com", ".org", ".net", ".ar", ".cl", ".ur", ".br", ".", "/", "-", "\/"), "",  Tools::getHttpHost(true).__PS_BASE_URI__ );
-                    if ( strlen( strval(strval($cart->id)) ) == 25) {
-                        $seller_descriptor = strval($cart->id);
+                    $formated_price = (int)(str_replace(array(".", '"', "$"), "", number_format((float)$total, 2, '.', '')));
+                    $formated_dues = (int)($cuotas);
+                    $url = str_replace(array("http://", "https://", "www.", ".com", ".org", ".net", ".ar", ".cl", ".ur", ".br", ".", "/", "-", "\/"), "", Tools::getHttpHost(true).__PS_BASE_URI__);
+                    if (Tools::strlen((string)($cart->id)) == 25) {
+                        $seller_descriptor = (string)($cart->id);
                     } else {
-                        if ( strlen( strval($url . "*" . strval($cart->id)) ) <= 25) {
-                            $seller_descriptor = strval( $url . "*" . strval($cart->id));
-                        }  else {
-                            $difference = -1 * abs( ( strlen( strval($url) ) + strlen( strval("*" . strval($cart->id)) ) ) - 25 );
-                            $chop_url = substr( $url, 0, $difference );
-                            $seller_descriptor = strval( $chop_url . "*" . strval($cart->id));
+                        if (Tools::strlen((string)($url . "*" . (string)($cart->id))) <= 25) {
+                            $seller_descriptor = (string)($url . "*" . (string)($cart->id));
+                        } else {
+                            $difference = -1 * abs((Tools::strlen((string)($url)) + Tools::strlen((string)("*" . (string)($cart->id)))) - 25);
+                            $chop_url = Tools::substr($url, 0, $difference);
+                            $seller_descriptor = (string)($chop_url . "*" . (string)($cart->id));
                         }
                     }
 
@@ -122,8 +124,8 @@ class PagounoValidationModuleFrontController extends ModuleFrontController {
 
                     $data = new StdClass();
                     $data -> transaction_group_type = 1;
-                    $data -> customer_transaction_identificator = strval($cart->id);
-                    $data -> external_reference = strval($cart->id);
+                    $data -> customer_transaction_identificator = (string)($cart->id);
+                    $data -> external_reference = (string)($cart->id);
                     $data -> primary_account_number_list = [$prim_acc];
 
                     $payload = json_encode($data);
@@ -136,7 +138,7 @@ class PagounoValidationModuleFrontController extends ModuleFrontController {
                     );
 
                     if ($response[0] == 200) {
-                        $body = json_decode( $response[1], true );
+                        $body = json_decode($response[1], true);
                         switch ($body['status']) {
                             case 200:
                                 if ($body['data']['success']) {
@@ -157,12 +159,12 @@ class PagounoValidationModuleFrontController extends ModuleFrontController {
 
                                         $order_reference = $db->executeS('SELECT reference FROM '._DB_PREFIX_.'orders WHERE id_order = '.(int)$this->module->currentOrder);
 
-                                        $db->update( 'orders', array(
+                                        $db->update('orders', array(
                                             'total_paid_tax_incl' => pSQL((float)$total), // total pagado que tiene aparece como precio total
                                             'date_upd' => date('Y-m-d H:i:s')
                                         ), 'id_order = '.(int)$this->module->currentOrder, 1, true);
 
-                                        $db->update( 'order_payment', array(
+                                        $db->update('order_payment', array(
                                             'amount' => pSQL((float)$total),
                                             'card_number' => $body['data']['request'][0]['last_4_digits'],
                                             'card_brand' => $body['data']['request'][0]['card']
@@ -179,8 +181,7 @@ class PagounoValidationModuleFrontController extends ModuleFrontController {
 //                                        );
                                         
                                         $this->setTemplate('module:pagoUno/views/templates/hook/payment_return.tpl');
-                                        
-                                    }catch (Exception $e) {
+                                    } catch (Exception $e) {
                                     }
                                 } else {
                                     Tools::redirect(__PS_BASE_URI__ .'index.php?controller=order&step=1&puerror=1');
@@ -200,5 +201,4 @@ class PagounoValidationModuleFrontController extends ModuleFrontController {
             }
         }
     }
-
 }

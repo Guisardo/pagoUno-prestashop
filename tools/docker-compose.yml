@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  linter:
+    build: .
+    volumes:
+      - ../pagouno:/app
+    command: /tools/php-cs-fixer/vendor/bin/php-cs-fixer fix .
