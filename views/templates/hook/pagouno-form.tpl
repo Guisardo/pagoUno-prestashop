@@ -14,7 +14,7 @@
         <div class="pu-form-row">
             <div class="pu-input pu-form-first">
                 <label>Nombre del Titular <span class="pu-required">* <span id="puNameError" style="display: none;"> Incorrecto</span></span></label>
-                <input class="pagoUno-input" id="pagoUno_ccName" type="text" autocomplete="off">
+                <input class="pagoUno-input form-control" id="pagoUno_ccName" type="text" readonly="readonly" title="Solo se pueden usar tarjetas que seas titular" alt="Solo se pueden usar tarjetas que seas titular">
             </div>
             <div class="pu-input pu-form-last">
                 <label>Cod. de Seguridad <span class="pu-required">*<span id="puCvcError" style="display: none;"> Incorrecto</span></span></label>
